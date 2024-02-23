@@ -103,6 +103,7 @@ export interface IOrder {
 }
 
 export interface IProduct {
+    image: ReactNode;
     id: number;
     name: string;
     isActive: boolean;

@@ -1,86 +1,53 @@
 import { useEffect, useState } from "react";
-import { useList, useTranslate } from "@refinedev/core";
-import { Button, Space, Skeleton } from "antd";
-
+import { Button, Space } from "antd";
 import { ICategory } from "../../interfaces";
 
-type ProductItemProps = {
+type ProductCategoryFilterProps = {
+    categories: ICategory[];
     value?: string[];
     onChange?: (value: string[]) => void;
 };
 
-export const ProductCategoryFilter: React.FC<ProductItemProps> = ({
+export const ProductCategoryFilter: React.FC<ProductCategoryFilterProps> = ({
+    categories,
     onChange,
-    value,
+    value = [],
 }) => {
-    const t = useTranslate();
-
-    const [filterCategories, setFilterCategories] = useState<string[]>(
-        value ?? [],
-    );
+    const [filterCategories, setFilterCategories] = useState<string[]>(value);
 
     useEffect(() => {
-        if (filterCategories.length > 0) {
-            onChange?.(filterCategories);
-        }
-    }, [filterCategories]);
-
-    const { data: categoryData, isLoading: categoryIsLoading } =
-        useList<ICategory>({
-            resource: "categories",
-            config: {
-                pagination: { pageSize: 30 },
-            },
-        });
-
-    const toggleFilterCategory = (clickedCategory: string) => {
-        const target = filterCategories.findIndex(
-            (category) => category === clickedCategory,
-        );
-
-        if (target < 0) {
-            setFilterCategories((prevCategories) => {
-                return [...prevCategories, clickedCategory];
-            });
-        } else {
-            const copyFilterCategories = [...filterCategories];
-
-            copyFilterCategories.splice(target, 1);
-
-            setFilterCategories(copyFilterCategories);
-        }
-
+        // Notify parent component about the change
         onChange?.(filterCategories);
-    };
+    }, [filterCategories, onChange]);
 
-    if (categoryIsLoading) {
-        return <Skeleton active paragraph={{ rows: 6 }} />;
-    }
+    const toggleFilterCategory = (clickedCategoryId: string) => {
+        setFilterCategories((currentCategories) => {
+            const isAlreadySelected = currentCategories.includes(clickedCategoryId);
+            if (isAlreadySelected) {
+                return currentCategories.filter(id => id !== clickedCategoryId);
+            } else {
+                return [...currentCategories, clickedCategoryId];
+            }
+        });
+    };
 
     return (
         <Space wrap>
             <Button
                 shape="round"
                 type={filterCategories.length === 0 ? "primary" : "default"}
-                onClick={() => {
-                    setFilterCategories([]);
-                    onChange?.([]);
-                }}
+                onClick={() => setFilterCategories([])}
             >
-                {t("stores.all")}
+                All
             </Button>
-            {categoryData?.data.map((category) => (
+            {categories.map((category) => (
                 <Button
-                    key={category.id}
+                    key={category._id}
                     shape="round"
-                    type={
-                        filterCategories.includes(category.id.toString())
-                            ? "primary"
-                            : "default"
-                    }
-                    onClick={() => toggleFilterCategory(category.id.toString())}
+                    type={filterCategories.includes(category._id) ? "primary" : "default"}
+                    onClick={() => toggleFilterCategory(category._id)}
                 >
-                    {category.title}
+                    {category.name}
                 </Button>
             ))}
         </Space>

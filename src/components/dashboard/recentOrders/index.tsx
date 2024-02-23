@@ -1,132 +1,115 @@
+import React, { useEffect, useState } from 'react';
 import { useNavigation, useTranslate } from "@refinedev/core";
-import { useTable } from "@refinedev/antd";
-import { Typography, Table, Avatar, Space, Tag } from "antd";
-import {
-    RecentOrdersColumn,
-    Price,
-    OrderId,
-    Title,
-    TitleWrapper,
-} from "./styled";
-
+import { Typography, Table, Space } from "antd";
 import { OrderActions } from "../../../components";
 
-import { IOrder } from "../../../interfaces";
-
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 
 export const RecentOrders: React.FC = () => {
-    const t = useTranslate();
-    const { tableProps } = useTable<IOrder>({
-        resource: "orders",
-        initialSorter: [
-            {
-                field: "createdAt",
-                order: "desc",
-            },
-        ],
-        initialPageSize: 4,
-        permanentFilter: [
-            {
-                field: "status.text",
-                operator: "eq",
-                value: "Pending",
-            },
-        ],
-        syncWithLocation: false,
-    });
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [productDetails, setProductDetails] = useState<any[]>([]);
+  const t = useTranslate();
+  const { show } = useNavigation();
 
-    const { show } = useNavigation();
+  useEffect(() => {
+    const fetchOrders = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('https://tastykitchen-backend.vercel.app/orders');
+        const data = await response.json();
+        setOrders(data.reverse());
+        fetchProductDetails(data);
+      } catch (error) {
+        console.error("Failed to fetch orders:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return (
-        <Table
-            {...tableProps}
-            pagination={{ ...tableProps.pagination, simple: true }}
-            showHeader={false}
-            rowKey="id"
-        >
-            <Table.Column<IOrder>
-                key="avatar"
-                render={(_, record) => (
-                    <Avatar
-                        size={{
-                            xs: 60,
-                            lg: 108,
-                            xl: 132,
-                            xxl: 144,
-                        }}
-                        src={record?.products[0]?.images[0].url}
-                    />
-                )}
-            />
-            <RecentOrdersColumn
-                key="summary"
-                render={(_, record) => (
-                    <TitleWrapper>
-                        <Title strong>{record.products[0]?.name}</Title>
-                        <Paragraph
-                            ellipsis={{
-                                rows: 2,
-                                tooltip: record.products[0]?.description,
-                                symbol: <span>...</span>,
-                            }}
-                        >
-                            {record.products[0]?.description}
-                        </Paragraph>
+    fetchOrders();
+  }, []);
 
-                        <OrderId
-                            strong
-                            onClick={() => {
-                                show("orders", record.id);
-                            }}
-                        >
-                            #{record.orderNumber}
-                        </OrderId>
-                    </TitleWrapper>
-                )}
-            />
-            <RecentOrdersColumn
-                key="summary"
-                render={(_, record) => (
-                    <Space direction="vertical">
-                        <Title
-                            strong
-                        >{`${record.courier.name} ${record.courier.surname}`}</Title>
-                        <Text>{record.adress.text}</Text>
-                    </Space>
-                )}
-            />
-            <Table.Column<IOrder>
-                dataIndex="amount"
-                render={(value, record) => (
-                    <Space
-                        size="large"
-                        style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                        }}
-                    >
-                        <Price
-                            strong
-                            options={{
-                                currency: "USD",
-                                style: "currency",
-                                notation: "standard",
-                            }}
-                            value={value / 100}
-                        />
-                        <Tag color="orange">
-                            {t(`enum.orderStatuses.${record.status.text}`)}
-                        </Tag>
-                    </Space>
-                )}
-            />
-            <Table.Column<IOrder>
-                fixed="right"
-                key="actions"
-                align="center"
-                render={(_, record) => <OrderActions record={record} />}
-            />
-        </Table>
-    );
+  const fetchProductDetails = async (orders) => {
+    try {
+      const productDetailsPromises = orders.flatMap((order) =>
+        order.products.map(async (product) => {
+          const response = await fetch(
+            `https://tastykitchen-backend.vercel.app/products/${product.productId}`
+          );
+          return await response.json();
+        })
+      );
+      const details = await Promise.all(productDetailsPromises);
+      setProductDetails(details);
+      console.log(details);
+    } catch (error) {
+      console.error("Failed to fetch product details:", error);
+    }
+  };
+
+  return (
+    <Table
+      dataSource={orders}
+      pagination={{ simple: true }}
+      showHeader={false}
+      rowKey="_id"
+      loading={loading}
+    >
+      <Table.Column
+        title="Order Number"
+        dataIndex="orderNumber"
+        key="orderNumber"
+        render={orderNumber => <Text strong>{orderNumber ? "#" + orderNumber : "-"}</Text>}
+      />
+      <Table.Column
+        title="Products"
+        key="products"
+        render={(_, record) => (
+          <Space direction="vertical">
+            {record.products.map((product, index) => (
+              <Space key={index} direction="horizontal">
+                <Text>{productDetails[index]?.name || 'Products loading...'}</Text>
+                <Text>x{product.quantity}</Text>
+                <Text>€{product.price.toFixed(2)}</Text>
+              </Space>
+            ))}
+          </Space>
+        )}
+      />
+      <Table.Column
+        title="Total Price"
+        dataIndex="totalPrice"
+        key="totalPrice"
+        render={totalPrice => <Text strong>{totalPrice}€</Text>}
+      />
+        <Table.Column
+        title="Delivery"
+        dataIndex="delivery"
+        key="delivery"
+        render={delivery => (
+          <Space direction="vertical">
+            <Text>{delivery.street},</Text>
+            <Text>{delivery.postcode} München</Text>
+          </Space>
+        )}
+      />
+      <Table.Column
+        title="Status"
+        dataIndex="status"
+        key="status"
+        render={status => <Text>{status ? status.toUpperCase() : "-"}</Text>}
+      />
+      <Table.Column
+        title="Action"
+        key="action"
+        align="center"
+        render={(_, record) => (
+          <Space size="middle">
+            <OrderActions record={record} />
+          </Space>
+        )}
+      />
+    </Table>
+  );
 };

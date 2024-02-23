@@ -1,2 +1,4 @@
-export * from "./list";
-export * from "./show";
+import UserList from './list';
+import UserShow from './show';
+
+export { UserList, UserShow };

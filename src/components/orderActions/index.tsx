@@ -9,14 +9,14 @@ import { Dropdown, Menu } from "antd";
 import { IOrder } from "../../interfaces";
 
 type OrderActionProps = {
-    record: IOrder;
+    record: any;
 };
 
 export const OrderActions: React.FC<OrderActionProps> = ({ record }) => {
     const t = useTranslate();
     const { mutate } = useUpdate();
 
-    const moreMenu = (record: IOrder) => (
+    const moreMenu = (record: any) => (
         <Menu
             mode="vertical"
             onClick={({ domEvent }) => domEvent.stopPropagation()}
@@ -29,7 +29,7 @@ export const OrderActions: React.FC<OrderActionProps> = ({ record }) => {
                     alignItems: "center",
                     fontWeight: 500,
                 }}
-                disabled={record.status.text !== "Pending"}
+                disabled={record.status !== "pending"}
                 icon={
                     <CheckCircleOutlined
                         style={{
@@ -71,8 +71,8 @@ export const OrderActions: React.FC<OrderActionProps> = ({ record }) => {
                     />
                 }
                 disabled={
-                    record.status.text === "Delivered" ||
-                    record.status.text === "Cancelled"
+                    record.status === "Delivered" ||
+                    record.status === "Cancelled"
                 }
                 onClick={() =>
                     mutate({

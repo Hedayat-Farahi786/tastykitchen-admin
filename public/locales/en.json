@@ -103,7 +103,7 @@
         "actions": "Actions"
     },
     "search": {
-        "placeholder": "Search by Store ID, E-mail, Keyword",
+        "placeholder": "Search orders",
         "more": "more"
     },
     "status": {
@@ -234,7 +234,10 @@
             "products": "Products",
             "createdAt": "CreatedAt",
             "amount": "Amount",
-            "itemsAmount": "{{amount}} items"
+            "itemsAmount": "{{amount}} items",
+            "totalPrice": "Total",
+            "date": "Date",
+            "payment": "Payment Method"
         },
         "filter": {
             "title": "Filters",

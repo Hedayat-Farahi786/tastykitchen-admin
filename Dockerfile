@@ -9,7 +9,7 @@ ENV NODE_ENV development
 COPY package*.json ./
 COPY .npmrc ./
 
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 COPY . /opt/app
 

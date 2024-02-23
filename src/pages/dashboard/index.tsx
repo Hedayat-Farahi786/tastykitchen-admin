@@ -70,7 +70,7 @@ export const DashboardPage: React.FC = () => {
                     </Col>
                 </Row>
             </Col>
-            <Col xl={17} lg={16} md={24} sm={24} xs={24}>
+            {/* <Col xl={17} lg={16} md={24} sm={24} xs={24}>
                 <Card
                     bodyStyle={{
                         height: 550,
@@ -78,7 +78,7 @@ export const DashboardPage: React.FC = () => {
                     }}
                     title={
                         <Text
-                            strong /* style={{ fontSize: 24, fontWeight: 800 }} */
+                            strong 
                         >
                             {t("dashboard.deliveryMap.title")}
                         </Text>
@@ -86,7 +86,7 @@ export const DashboardPage: React.FC = () => {
                 >
                     <DeliveryMap />
                 </Card>
-            </Col>
+            </Col> */}
             <Col xl={7} lg={8} md={24} sm={24} xs={24}>
                 <Card
                     bodyStyle={{
@@ -111,7 +111,7 @@ export const DashboardPage: React.FC = () => {
                     <RecentOrders />
                 </Card>
             </Col>
-            <Col xl={7} lg={8} md={24} sm={24} xs={24}>
+            {/* <Col xl={7} lg={8} md={24} sm={24} xs={24}>
                 <Card
                     title={
                         <Text strong>{t("dashboard.trendingMenus.title")}</Text>
@@ -119,7 +119,7 @@ export const DashboardPage: React.FC = () => {
                 >
                     <TrendingMenu />
                 </Card>
-            </Col>
+            </Col> */}
         </Row>
     );
 };

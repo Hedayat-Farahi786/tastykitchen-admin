@@ -1,385 +1,212 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-    useTranslate,
-    IResourceComponentsProps,
-    CrudFilters,
-    useExport,
-    useNavigation,
-    HttpError,
-    getDefaultFilter,
+  useTranslate,
+  IResourceComponentsProps,
+  useExport,
+  useNavigation,
+  HttpError,
+  getDefaultFilter,
 } from "@refinedev/core";
 
 import {
-    List,
-    TextField,
-    useTable,
-    getDefaultSortOrder,
-    DateField,
-    NumberField,
-    useSelect,
-    ExportButton,
+  List,
+  TextField,
+  useTable,
+  getDefaultSortOrder,
+  DateField,
+  NumberField,
+  useSelect,
+  ExportButton,
 } from "@refinedev/antd";
 import { SearchOutlined } from "@ant-design/icons";
-import {
-    Table,
-    Popover,
-    Card,
-    Input,
-    Form,
-    DatePicker,
-    Select,
-    Button,
-    FormProps,
-    Row,
-    Col,
-} from "antd";
+import { Table, Button, Skeleton, Row, Col, Popover } from "antd";
 import dayjs from "dayjs";
 
-import { OrderStatus, OrderActions } from "../../components";
-import {
-    IOrder,
-    IStore,
-    IOrderFilterVariables,
-    IOrderStatus,
-    IUser,
-} from "../../interfaces";
-
-const { RangePicker } = DatePicker;
+import { IOrder, IOrderFilterVariables } from "../../interfaces";
+import { OrderActions } from "../../components";
 
 export const OrderList: React.FC<IResourceComponentsProps> = () => {
-    const { tableProps, sorter, searchFormProps, filters } = useTable<
-        IOrder,
-        HttpError,
-        IOrderFilterVariables
-    >({
-        onSearch: (params) => {
-            const filters: CrudFilters = [];
-            const { q, store, user, createdAt, status } = params;
+  const t = useTranslate();
+  const { show } = useNavigation();
+  const [loading, setLoading] = useState<boolean>(true);
+  const [orders, setOrders] = useState<IOrder[]>([]);
+  const [productDetails, setProductDetails] = useState<any[]>([]);
 
-            filters.push({
-                field: "q",
-                operator: "eq",
-                value: q,
-            });
+  // Fetch orders from the backend
+  const fetchOrders = async () => {
+    try {
+      // Replace this with your actual backend API endpoint to fetch orders
+      const response = await fetch("https://tastykitchen-backend.vercel.app/orders");
+      const data: any = await response.json();
+      setOrders(data.reverse());
+      setLoading(false);
+    } catch (error) {
+      console.error("Failed to fetch orders:", error);
+    }
+  };
 
-            filters.push({
-                field: "store.id",
-                operator: "eq",
-                value: store,
-            });
-
-            filters.push({
-                field: "user.id",
-                operator: "eq",
-                value: user,
-            });
-
-            filters.push({
-                field: "status.text",
-                operator: "in",
-                value: status,
-            });
-
-            filters.push(
-                {
-                    field: "createdAt",
-                    operator: "gte",
-                    value: createdAt
-                        ? createdAt[0].startOf("day").toISOString()
-                        : undefined,
-                },
-                {
-                    field: "createdAt",
-                    operator: "lte",
-                    value: createdAt
-                        ? createdAt[1].endOf("day").toISOString()
-                        : undefined,
-                },
+  useEffect(() => {
+    const fetchProductDetails = async () => {
+      try {
+        const productDetailsPromises = orders.flatMap((order) =>
+          order.products.map(async (product) => {
+            const response = await fetch(
+              `https://tastykitchen-backend.vercel.app/products/${product.productId}`
             );
+            return await response.json();
+          })
+        );
+        const productDetails = await Promise.all(productDetailsPromises);
+        setProductDetails(productDetails);
+      } catch (error) {
+        console.error("Failed to fetch product details:", error);
+      }
+    };
 
-            return filters;
-        },
-    });
+    if (orders.length > 0) {
+      fetchProductDetails();
+    }
+  }, [orders]);
 
-    const t = useTranslate();
-    const { show } = useNavigation();
+  useMemo(() => {
+    fetchOrders();
+  }, []); // Fetch orders only once on component mount
 
-    const { isLoading, triggerExport } = useExport<IOrder>({
-        sorter,
-        filters,
-        pageSize: 50,
-        maxItemCount: 50,
-        mapData: (item) => {
-            return {
-                id: item.id,
-                amount: item.amount,
-                orderNumber: item.orderNumber,
-                status: item.status.text,
-                store: item.store.title,
-                user: item.user.firstName,
-            };
-        },
-    });
+  const { tableProps, sorter, searchFormProps, filters } = useTable<
+    IOrder,
+    HttpError,
+    IOrderFilterVariables
+  >({
+    // Implement your table configuration as needed
+  });
 
-    const Actions: React.FC = () => (
-        <ExportButton onClick={triggerExport} loading={isLoading} />
-    );
+  const handleExport = () => {
+    // Implement export functionality as needed
+  };
+
+  const renderTable = () => {
+    if (loading) {
+      return <Skeleton active />;
+    }
 
     return (
-        <Row gutter={[16, 16]}>
-            <Col
-                xl={6}
-                lg={24}
-                xs={24}
-                style={{
-                    marginTop: "52px",
-                }}
-            >
-                <Card title={t("orders.filter.title")}>
-                    <Filter
-                        formProps={searchFormProps}
-                        filters={filters || []}
-                    />
-                </Card>
-            </Col>
-            <Col xl={18} xs={24}>
-                <List
-                    headerProps={{
-                        extra: <Actions />,
+      <Table
+        {...tableProps}
+        dataSource={orders}
+        rowKey="id"
+        onRow={(record) => ({
+          onClick: () => {
+            show("orders", record.id);
+          },
+        })}
+      >
+        <Table.Column
+          key="id"
+          dataIndex="id"
+          title="#"
+          render={(_, val, index) =>  index + 1}
+        />
+        <Table.Column
+          key="orderNumber"
+          dataIndex="orderNumber"
+          title={t("orders.fields.orderNumber")}
+          render={(value) => <TextField value={"#"+value} />}
+        />
+        <Table.Column
+          key="status"
+          dataIndex="status"
+          title={t("orders.fields.status")}
+          render={(value) => <TextField value={value ? value : "-"} />}
+        />
+        <Table.Column
+                align="right"
+                key="totalPrice"
+                dataIndex="totalPrice"
+                title={t("orders.fields.totalPrice")}
+                render={(value) => (
+                  <NumberField
+                    options={{
+                      currency: "EUR",
+                      style: "currency",
                     }}
-                >
-                    <Table
-                        {...tableProps}
-                        rowKey="id"
-                        onRow={(record) => {
-                            return {
-                                onClick: () => {
-                                    show("orders", record.id);
-                                },
-                            };
-                        }}
+                    value={value}
+                  />
+                )}
+              />
+        <Table.Column
+          key="payment"
+          dataIndex="payment"
+          title={t("orders.fields.payment")}
+          render={(value) => <TextField value={value ? value : "-"} />}
+        />
+        <Table.Column
+                key="products"
+                dataIndex="products"
+                title="Products"
+                render={(_, record) => {
+                  const productsWithDetails = record.products.map(
+                    (product, index) => ({
+                      ...product,
+                      ...productDetails[index],
+                    })
+                  );
+                  return (
+                    <Popover
+                      content={
+                        <ul>
+                          {productsWithDetails.map((product) => (
+                            <li key={product.id}>
+                              {product.name} - {product.quantity}x{" "}
+                              <strong style={{ marginLeft: "10px" }}>
+                                {product.price.toFixed(2)} €
+                              </strong>
+                            </li>
+                          ))}
+                        </ul>
+                      }
+                      title="Products"
+                      trigger="hover"
                     >
-                        <Table.Column
-                            key="orderNumber"
-                            dataIndex="orderNumber"
-                            title={t("orders.fields.orderNumber")}
-                            render={(value) => <TextField value={value} />}
-                        />
-                        <Table.Column<IOrder>
-                            key="status.text"
-                            dataIndex={["status", "text"]}
-                            title={t("orders.fields.status")}
-                            render={(value) => {
-                                return <OrderStatus status={value} />;
-                            }}
-                            defaultSortOrder={getDefaultSortOrder(
-                                "status.text",
-                                sorter,
-                            )}
-                            sorter
-                        />
-                        <Table.Column
-                            align="right"
-                            key="amount"
-                            dataIndex="amount"
-                            title={t("orders.fields.amount")}
-                            defaultSortOrder={getDefaultSortOrder(
-                                "amount",
-                                sorter,
-                            )}
-                            sorter
-                            render={(value) => {
-                                return (
-                                    <NumberField
-                                        options={{
-                                            currency: "USD",
-                                            style: "currency",
-                                        }}
-                                        value={value / 100}
-                                    />
-                                );
-                            }}
-                        />
-                        <Table.Column
-                            key="store.id"
-                            dataIndex={["store", "title"]}
-                            title={t("orders.fields.store")}
-                        />
-                        <Table.Column
-                            key="user.fullName"
-                            dataIndex={["user", "fullName"]}
-                            title={t("orders.fields.user")}
-                        />
-                        <Table.Column<IOrder>
-                            key="products"
-                            dataIndex="products"
-                            title={t("orders.fields.products")}
-                            render={(_, record) => (
-                                <Popover
-                                    content={
-                                        <ul>
-                                            {record.products.map((product) => (
-                                                <li key={product.id}>
-                                                    {product.name}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    }
-                                    title="Products"
-                                    trigger="hover"
-                                >
-                                    {t("orders.fields.itemsAmount", {
-                                        amount: record.products.length,
-                                    })}
-                                </Popover>
-                            )}
-                        />
-                        <Table.Column
-                            key="createdAt"
-                            dataIndex="createdAt"
-                            title={t("orders.fields.createdAt")}
-                            render={(value) => (
-                                <DateField value={value} format="LLL" />
-                            )}
-                            sorter
-                        />
-                        <Table.Column<IOrder>
-                            fixed="right"
-                            title={t("table.actions")}
-                            dataIndex="actions"
-                            key="actions"
-                            align="center"
-                            render={(_value, record) => (
-                                <OrderActions record={record} />
-                            )}
-                        />
-                    </Table>
-                </List>
-            </Col>
-        </Row>
+                      {`${record.products.length}`}
+                    </Popover>
+                  );
+                }}
+              />
+              <Table.Column
+              key="createdAt"
+              dataIndex="createdAt"
+              title={t("orders.fields.createdAt")}
+              render={(value) => <DateField value={value} format="YYYY.MM.DD" />}
+              sorter
+            />
+            <Table.Column<IOrder>
+              fixed="right"
+              title={t("table.actions")}
+              dataIndex="actions"
+              key="actions"
+              align="center"
+              render={(_value, record) => <OrderActions record={record} />}
+            />
+        {/* Add more columns as needed based on your order data */}
+      </Table>
     );
-};
+  };
 
-const Filter: React.FC<{ formProps: FormProps; filters: CrudFilters }> = (
-    props,
-) => {
-    const t = useTranslate();
-
-    const { formProps, filters } = props;
-    const { selectProps: storeSelectProps } = useSelect<IStore>({
-        resource: "stores",
-        defaultValue: getDefaultFilter("store.id", filters),
-    });
-
-    const { selectProps: orderSelectProps } = useSelect<IOrderStatus>({
-        resource: "orderStatuses",
-        optionLabel: "text",
-        optionValue: "text",
-        defaultValue: getDefaultFilter("status.text", filters),
-    });
-
-    const { selectProps: userSelectProps } = useSelect<IUser>({
-        resource: "users",
-        optionLabel: "fullName",
-        defaultValue: getDefaultFilter("user.id", filters),
-    });
-
-    const createdAt = useMemo(() => {
-        const start = getDefaultFilter("createdAt", filters, "gte");
-        const end = getDefaultFilter("createdAt", filters, "lte");
-
-        const startFrom = dayjs(start);
-        const endAt = dayjs(end);
-
-        if (start && end) {
-            return [startFrom, endAt];
-        }
-        return undefined;
-    }, [filters]);
-
-    return (
-        <Form
-            layout="vertical"
-            {...formProps}
-            initialValues={{
-                q: getDefaultFilter("q", filters),
-                store: getDefaultFilter("store.id", filters)
-                    ? Number(getDefaultFilter("store.id", filters))
-                    : undefined,
-                user: getDefaultFilter("user.id", filters)
-                    ? Number(getDefaultFilter("user.id", filters))
-                    : undefined,
-                status: getDefaultFilter("status.text", filters, "in"),
-                createdAt,
-            }}
+  return (
+    <Row gutter={[16, 16]}>
+        {/* <Col xl={6} lg={24} xs={24}>
+      </Col> */}
+      <Col xl={24} xs={24}>
+        <List
+          headerProps={{
+            extra: (
+              <ExportButton onClick={handleExport} loading={false} />
+            ), // Update loading status as needed
+          }}
         >
-            <Row gutter={[10, 0]} align="bottom">
-                <Col xl={24} md={8} sm={12} xs={24}>
-                    <Form.Item label={t("orders.filter.search.label")} name="q">
-                        <Input
-                            placeholder={t("orders.filter.search.placeholder")}
-                            prefix={<SearchOutlined />}
-                        />
-                    </Form.Item>
-                </Col>
-                <Col xl={24} md={8} sm={12} xs={24}>
-                    <Form.Item
-                        label={t("orders.filter.status.label")}
-                        name="status"
-                    >
-                        <Select
-                            {...orderSelectProps}
-                            allowClear
-                            mode="multiple"
-                            placeholder={t("orders.filter.status.placeholder")}
-                        />
-                    </Form.Item>
-                </Col>
-                <Col xl={24} md={8} sm={12} xs={24}>
-                    <Form.Item
-                        label={t("orders.filter.store.label")}
-                        name="store"
-                    >
-                        <Select
-                            {...storeSelectProps}
-                            allowClear
-                            placeholder={t("orders.filter.store.placeholder")}
-                        />
-                    </Form.Item>
-                </Col>
-                <Col xl={24} md={8} sm={12} xs={24}>
-                    <Form.Item
-                        label={t("orders.filter.user.label")}
-                        name="user"
-                    >
-                        <Select
-                            {...userSelectProps}
-                            allowClear
-                            placeholder={t("orders.filter.user.placeholder")}
-                        />
-                    </Form.Item>
-                </Col>
-                <Col xl={24} md={8} sm={12} xs={24}>
-                    <Form.Item
-                        label={t("orders.filter.createdAt.label")}
-                        name="createdAt"
-                    >
-                        <RangePicker style={{ width: "100%" }} />
-                    </Form.Item>
-                </Col>
-                <Col xl={24} md={8} sm={12} xs={24}>
-                    <Form.Item>
-                        <Button
-                            htmlType="submit"
-                            type="primary"
-                            size="large"
-                            block
-                        >
-                            {t("orders.filter.submit")}
-                        </Button>
-                    </Form.Item>
-                </Col>
-            </Row>
-        </Form>
-    );
+          {renderTable()}
+        </List>
+      </Col>
+    </Row>
+  );
 };

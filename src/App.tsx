@@ -104,15 +104,15 @@ const App: React.FC = () => {
                                     icon: <PizzaIcon />,
                                 },
                             },
-                            {
-                                name: "stores",
-                                list: "/stores",
-                                create: "/stores/create",
-                                edit: "/stores/edit/:id",
-                                meta: {
-                                    icon: <ShopOutlined />,
-                                },
-                            },
+                            // {
+                            //     name: "stores",
+                            //     list: "/stores",
+                            //     create: "/stores/create",
+                            //     edit: "/stores/edit/:id",
+                            //     meta: {
+                            //         icon: <ShopOutlined />,
+                            //     },
+                            // },
                             {
                                 name: "categories",
                                 list: "/categories",

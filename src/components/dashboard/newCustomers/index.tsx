@@ -11,9 +11,9 @@ import { Header, HeaderNumbers, NewCustomersWrapper } from "./styled";
 
 export const NewCustomers: React.FC = () => {
     const t = useTranslate();
-    const API_URL = useApiUrl();
+    const API_URL = "https://tastykitchen-backend.vercel.app";
 
-    const url = `${API_URL}/newCustomers`;
+    const url = `${API_URL}/customers`;
     const { data, isLoading } = useCustom<{
         data: ISalesChart[];
         total: number;

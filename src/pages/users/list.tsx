@@ -1,252 +1,85 @@
-import {
-    useTranslate,
-    IResourceComponentsProps,
-    CrudFilters,
-    HttpError,
-} from "@refinedev/core";
-import {
-    List,
-    useTable,
-    DateField,
-    BooleanField,
-    ShowButton,
-} from "@refinedev/antd";
-import { SearchOutlined } from "@ant-design/icons";
-import {
-    Table,
-    Avatar,
-    Card,
-    Input,
-    Form,
-    DatePicker,
-    Button,
-    Select,
-    FormProps,
-    Row,
-    Col,
-} from "antd";
+import React, { useEffect, useState } from "react";
+import { Table, Card, Col, Row, Input, Button, Space } from "antd";
+import { SearchOutlined, EyeOutlined } from "@ant-design/icons";
+import { useTranslate } from "@refinedev/core";
+import { ShowButton } from "@refinedev/antd";
+import { Link } from "react-router-dom";
+interface IUser {
+  _id: string;
+  name: string;
+  phone: string;
+  address: {
+    street: string;
+    postcode: string;
+    floor: string;
+  };
+}
 
-import { IUser, IUserFilterVariables } from "../../interfaces";
+const UserList: React.FC = () => {
+  const [users, setUsers] = useState<IUser[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const t = useTranslate();
 
-export const UserList: React.FC<IResourceComponentsProps> = () => {
-    const { tableProps, searchFormProps } = useTable<
-        IUser,
-        HttpError,
-        IUserFilterVariables
-    >({
-        initialSorter: [
-            {
-                field: "id",
-                order: "desc",
-            },
-        ],
-        onSearch: (params) => {
-            const filters: CrudFilters = [];
-            const { q, status, createdAt, gender, isActive } = params;
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch(
+          `https://tastykitchen-backend.vercel.app/users?q=${searchTerm}`
+        );
+        const data: IUser[] = await response.json();
+        setUsers(data);
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+      }
+    };
 
-            filters.push({
-                field: "q",
-                operator: "eq",
-                value: q,
-            });
+    fetchUsers();
+  }, [searchTerm]);
 
-            filters.push(
-                {
-                    field: "createdAt",
-                    operator: "gte",
-                    value: createdAt
-                        ? createdAt[0].startOf("day").toISOString()
-                        : undefined,
-                },
-                {
-                    field: "createdAt",
-                    operator: "lte",
-                    value: createdAt
-                        ? createdAt[1].endOf("day").toISOString()
-                        : undefined,
-                },
-            );
+  const viewUserDetails = (userId: string) => {
+    history.push(`/users/${userId}`);
+    navigation.show("users", userId);
+  };
 
-            filters.push({
-                field: "gender",
-                operator: "eq",
-                value: gender,
-            });
-
-            filters.push({
-                field: "isActive",
-                operator: "eq",
-                value: isActive,
-            });
-
-            filters.push({
-                field: "status.text",
-                operator: "eq",
-                value: status,
-            });
-
-            return filters;
-        },
-        syncWithLocation: false,
-    });
-
-    const t = useTranslate();
-
-    return (
-        <Row gutter={[16, 16]}>
-            <Col
-                xl={6}
-                lg={24}
-                xs={24}
-                style={{
-                    marginTop: "48px",
-                }}
-            >
-                <Card title={t("users.filter.title")}>
-                    <Filter formProps={searchFormProps} />
-                </Card>
-            </Col>
-
-            <Col xl={18} xs={24}>
-                <List>
-                    <Table {...tableProps} rowKey="id">
-                        <Table.Column
-                            key="gsm"
-                            dataIndex="gsm"
-                            title={t("users.fields.gsm")}
-                        />
-                        <Table.Column
-                            align="center"
-                            key="avatar"
-                            dataIndex={["avatar"]}
-                            title={t("users.fields.avatar.label")}
-                            render={(value) => <Avatar src={value[0].url} />}
-                        />
-                        <Table.Column
-                            key="firstName"
-                            dataIndex="firstName"
-                            title={t("users.fields.firstName")}
-                        />
-                        <Table.Column
-                            key="lastName"
-                            dataIndex="lastName"
-                            title={t("users.fields.lastName")}
-                        />
-                        <Table.Column
-                            key="gender"
-                            dataIndex="gender"
-                            title={t("users.fields.gender.label")}
-                            render={(value) =>
-                                t(`users.fields.gender.${value}`)
-                            }
-                        />
-                        <Table.Column
-                            key="isActive"
-                            dataIndex="isActive"
-                            title={t("users.fields.isActive.label")}
-                            render={(value) => <BooleanField value={value} />}
-                        />
-                        <Table.Column
-                            key="createdAt"
-                            dataIndex="createdAt"
-                            title={t("users.fields.createdAt")}
-                            render={(value) => (
-                                <DateField value={value} format="LLL" />
-                            )}
-                            sorter
-                        />
-                        <Table.Column<IUser>
-                            fixed="right"
-                            title={t("table.actions")}
-                            render={(_, record) => (
-                                <ShowButton hideText recordItemId={record.id} />
-                            )}
-                        />
-                    </Table>
-                </List>
-            </Col>
-        </Row>
-    );
+  return (
+    <Row gutter={[16, 16]}>
+      <Col span={24}>
+        <Card>
+          <Input
+            placeholder="Search users..."
+            prefix={<SearchOutlined />}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </Card>
+      </Col>
+      <Col span={24}>
+        <Card>
+          <Table dataSource={users} rowKey="_id">
+            <Table.Column title="Name" dataIndex="name" key="name" />
+            <Table.Column title="Phone" dataIndex="phone" key="phone" />
+            <Table.Column
+              title="Address"
+              key="address"
+              render={(_, record: IUser) =>
+                `${record.address.street}, ${record.address.postcode}`
+              }
+            />
+            <Table.Column
+              fixed="right"
+              title="Actions"
+              render={(_, record: IUser) => (
+                <Space size="middle">
+                  <Link to={`/users/show/${record._id}`}>
+                    <Button icon={<EyeOutlined />} />
+                  </Link>
+                </Space>
+              )}
+            />
+          </Table>
+        </Card>
+      </Col>
+    </Row>
+  );
 };
 
-const Filter: React.FC<{ formProps: FormProps }> = (props) => {
-    const t = useTranslate();
-
-    const { RangePicker } = DatePicker;
-
-    return (
-        <Form layout="vertical" {...props.formProps}>
-            <Row gutter={[10, 0]} align="bottom">
-                <Col xs={24} xl={24} md={12}>
-                    <Form.Item label={t("users.filter.search.label")} name="q">
-                        <Input
-                            placeholder={t("users.filter.search.placeholder")}
-                            prefix={<SearchOutlined />}
-                        />
-                    </Form.Item>
-                </Col>
-                <Col xs={24} xl={24} md={12}>
-                    <Form.Item
-                        label={t("users.filter.createdAt.label")}
-                        name="createdAt"
-                    >
-                        <RangePicker style={{ width: "100%" }} />
-                    </Form.Item>
-                </Col>
-                <Col xs={24} xl={24} md={8}>
-                    <Form.Item
-                        label={t("users.filter.gender.label")}
-                        name="gender"
-                    >
-                        <Select
-                            allowClear
-                            placeholder={t("users.filter.gender.placeholder")}
-                            options={[
-                                {
-                                    label: t("users.filter.gender.male"),
-                                    value: "Male",
-                                },
-                                {
-                                    label: t("users.filter.gender.female"),
-                                    value: "Female",
-                                },
-                            ]}
-                        />
-                    </Form.Item>
-                </Col>
-                <Col xs={24} xl={24} md={8}>
-                    <Form.Item
-                        label={t("users.filter.isActive.label")}
-                        name="isActive"
-                    >
-                        <Select
-                            allowClear
-                            placeholder={t("users.filter.isActive.placeholder")}
-                            options={[
-                                {
-                                    label: t("users.filter.isActive.true"),
-                                    value: "true",
-                                },
-                                {
-                                    label: t("users.filter.isActive.false"),
-                                    value: "false",
-                                },
-                            ]}
-                        />
-                    </Form.Item>
-                </Col>
-                <Col xs={24} xl={24} md={8}>
-                    <Form.Item>
-                        <Button
-                            style={{ width: "100%" }}
-                            htmlType="submit"
-                            type="primary"
-                        >
-                            {t("users.filter.submit")}
-                        </Button>
-                    </Form.Item>
-                </Col>
-            </Row>
-        </Form>
-    );
-};
+export default UserList;

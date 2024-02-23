@@ -1,166 +1,141 @@
-import {
-    useTranslate,
-    IResourceComponentsProps,
-    CrudFilters,
-    HttpError,
-    getDefaultFilter,
-} from "@refinedev/core";
-import { useSimpleList, CreateButton, useDrawerForm } from "@refinedev/antd";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { Typography, Row, Col, Form, Input, Select, List as AntdList } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
-import { Row, List as AntdList, Col, Form, Input, Typography } from "antd";
+import { useTranslate } from "@refinedev/core";
+import { useSimpleList, CreateButton, useDrawerForm } from "@refinedev/antd";
 
-import {
-    ProductItem,
-    ProductCategoryFilter,
-    CreateProduct,
-    EditProduct,
-} from "../../components/product";
-import { IProduct } from "../../interfaces";
+import { ProductItem, CreateProduct, EditProduct } from "../../components/product";
+import { IProduct, ICategory } from "../../interfaces";
 
 const { Text } = Typography;
+const { Option } = Select;
 
 export const ProductList: React.FC<IResourceComponentsProps> = () => {
-    const t = useTranslate();
+  const t = useTranslate();
 
-    const { listProps, searchFormProps, filters } = useSimpleList<
-        IProduct,
-        HttpError,
-        { name: string; categories: string[] }
-    >({
-        pagination: { pageSize: 12, current: 1 },
-        onSearch: ({ name, categories }) => {
-            const productFilters: CrudFilters = [];
+  const [categories, setCategories] = useState<ICategory[]>([]);
+  const [allProducts, setAllProducts] = useState<IProduct[]>([]);
+  const [products, setProducts] = useState<IProduct[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
-            productFilters.push({
-                field: "category.id",
-                operator: "in",
-                value: categories?.length > 0 ? categories : undefined,
-            });
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const response = await axios.get("https://tastykitchen-backend.vercel.app/categories");
+      setCategories(response.data);
+    };
 
-            productFilters.push({
-                field: "name",
-                operator: "contains",
-                value: name ? name : undefined,
-            });
+    const fetchProducts = async () => {
+      const response = await axios.get("https://tastykitchen-backend.vercel.app/products");
+      setAllProducts(response.data);
+    };
 
-            return productFilters;
-        },
-    });
+    fetchCategories();
+    fetchProducts();
+  }, []);
 
-    const {
-        drawerProps: createDrawerProps,
-        formProps: createFormProps,
-        saveButtonProps: createSaveButtonProps,
-        show: createShow,
-    } = useDrawerForm<IProduct>({
-        action: "create",
-        resource: "products",
-        redirect: false,
-    });
+  useEffect(() => {
+    // Filter products based on category and search term
+    const filterProducts = () => {
+      let filteredProducts = allProducts;
+      if (selectedCategory !== "all") {
+        filteredProducts = filteredProducts.filter(product => product.menuId === selectedCategory);
+      }
+      if (searchTerm) {
+        filteredProducts = filteredProducts.filter(product => product.name.toLowerCase().includes(searchTerm.toLowerCase()));
+      }
+      setProducts(filteredProducts);
+    };
 
-    const {
-        drawerProps: editDrawerProps,
-        formProps: editFormProps,
-        saveButtonProps: editSaveButtonProps,
-        show: editShow,
-        id: editId,
-    } = useDrawerForm<IProduct>({
-        action: "edit",
-        resource: "products",
-        redirect: false,
-    });
+    filterProducts();
+  }, [selectedCategory, allProducts, searchTerm]);
 
-    return (
-        <div>
-            <Form
-                {...searchFormProps}
-                onValuesChange={() => {
-                    searchFormProps.form?.submit();
-                }}
-                initialValues={{
-                    name: getDefaultFilter("name", filters, "contains"),
-                    categories: getDefaultFilter("category.id", filters, "in"),
-                }}
+  const { drawerProps: createDrawerProps, formProps: createFormProps, saveButtonProps: createSaveButtonProps, show: createShow } = useDrawerForm<IProduct>({
+    action: "create",
+    resource: "products",
+    redirect: false,
+  });
+
+  const { drawerProps: editDrawerProps, formProps: editFormProps, saveButtonProps: editSaveButtonProps, show: editShow, id: editId } = useDrawerForm<IProduct>({
+    action: "edit",
+    resource: "products",
+    redirect: false,
+  });
+
+  return (
+    <div>
+      <Form
+        initialValues={{
+          name: "",
+        }}
+      >
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={24}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: "8px",
+                marginBottom: "16px",
+              }}
             >
-                <Row gutter={[16, 16]}>
-                    <Col xs={24} sm={18}>
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                flexWrap: "wrap",
-                                gap: "8px",
-                                marginBottom: "16px",
-                            }}
-                        >
-                            <Text style={{ fontSize: "24px" }} strong>
-                                {t("products.products")}
-                            </Text>
-                            <Form.Item name="name" noStyle>
-                                <Input
-                                    style={{
-                                        width: "400px",
-                                    }}
-                                    placeholder={t("stores.productSearch")}
-                                    suffix={<SearchOutlined />}
-                                />
-                            </Form.Item>
-                            <CreateButton onClick={() => createShow()}>
-                                {t("stores.buttons.addProduct")}
-                            </CreateButton>
-                        </div>
-                        <AntdList
-                            grid={{
-                                gutter: 8,
-                                xs: 1,
-                                sm: 1,
-                                md: 2,
-                                lg: 3,
-                                xl: 4,
-                                xxl: 4,
-                            }}
-                            style={{
-                                height: "100%",
-                                overflow: "auto",
-                                paddingRight: "4px",
-                            }}
-                            {...listProps}
-                            renderItem={(item) => (
-                                <ProductItem item={item} editShow={editShow} />
-                            )}
-                        />
-                    </Col>
-                    <Col xs={0} sm={6}>
-                        <div
-                            style={{
-                                display: "flex",
-                                alignItems: "center",
-                                height: "40px",
-                                marginBottom: "16px",
-                            }}
-                        >
-                            <Text style={{ fontWeight: 500 }}>
-                                {t("stores.tagFilterDescription")}
-                            </Text>
-                        </div>
-                        <Form.Item name="categories">
-                            <ProductCategoryFilter />
-                        </Form.Item>
-                    </Col>
-                </Row>
-            </Form>
-            <CreateProduct
-                drawerProps={createDrawerProps}
-                formProps={createFormProps}
-                saveButtonProps={createSaveButtonProps}
+              <Text style={{ fontSize: "24px" }} strong>
+                {t("products.products")}
+              </Text>
+              <Input
+                style={{ width: "400px" }}
+                placeholder={t("stores.productSearch")}
+                suffix={<SearchOutlined />}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+              <CreateButton onClick={() => createShow()}>
+                {t("stores.buttons.addProduct")}
+              </CreateButton>
+            </div>
+            <Select
+              defaultValue="all"
+              style={{ width: 200, marginBottom: 16 }}
+              onChange={(value) => setSelectedCategory(value)}
+            >
+              <Option value="all">All Categories</Option>
+              {categories.map((category) => (
+                <Option key={category._id} value={category._id}>
+                  {category.name}
+                </Option>
+              ))}
+            </Select>
+            <AntdList
+              grid={{
+                gutter: 8,
+                xs: 1,
+                sm: 1,
+                md: 2,
+                lg: 3,
+                xl: 4,
+                xxl: 4,
+              }}
+              dataSource={products}
+              renderItem={(item) => (
+                <ProductItem item={item} editShow={editShow} />
+              )}
             />
-            <EditProduct
-                drawerProps={editDrawerProps}
-                formProps={editFormProps}
-                saveButtonProps={editSaveButtonProps}
-                editId={editId}
-            />
-        </div>
-    );
+          </Col>
+        </Row>
+      </Form>
+      <CreateProduct
+        drawerProps={createDrawerProps}
+        formProps={createFormProps}
+        saveButtonProps={createSaveButtonProps}
+      />
+      <EditProduct
+        drawerProps={editDrawerProps}
+        formProps={editFormProps}
+        saveButtonProps={editSaveButtonProps}
+        editId={editId}
+      />
+    </div>
+  );
 };
